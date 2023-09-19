@@ -190,7 +190,7 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_lb_listener_rule" "https" {
-  count = var.create_listeners && local.http_action ? local.count : 0
+  count = var.create_listeners && local.http_action ? (length(var.host_names) > 0 ? length(var.host_names) : length(var.host_paths) > 0 ? length(var.host_paths) : 0) : 0
 
   priority     = count.index + 1
   listener_arn = var.https_listener_arn == null ? one(aws_lb_listener.https[*].arn) : var.https_listener_arn
@@ -219,6 +219,18 @@ resource "aws_lb_listener_rule" "https" {
       }
     }
   }
+}
+
+resource "aws_lb_listener_rule" "https_1" {
+  count = var.create_listeners && local.http_action ? (length(var.host_names_and_paths) > 0 ? length(var.host_names_and_paths) : 0) : 0
+
+  priority     = count.index + 1
+  listener_arn = var.https_listener_arn == null ? one(aws_lb_listener.https[*].arn) : var.https_listener_arn
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.this[count.index + 1].arn
+  }
 
   # host and path conditions
   dynamic "condition" {
@@ -241,7 +253,6 @@ resource "aws_lb_listener_rule" "https" {
 
     }
   }
-
 }
 
 ####################### TARGET GROUP #############################
@@ -272,4 +283,12 @@ resource "aws_lb_target_group" "this" {
     unhealthy_threshold = var.unhealthy_threshold
     port                = length(var.ports) > 1 ? var.ports[count.index] : var.ports[0]
   }
+}
+
+resource "aws_lb_target_group_attachment" "this" {
+  count = length(var.instance_ids) > 0 ? length(var.instance_ids) : 0
+
+  target_group_arn = aws_lb_target_group.this[0].arn
+  target_id        = var.instance_ids[count.index]
+  port             = length(var.ports) > 1 ? var.ports[count.index] : var.ports[0]
 }

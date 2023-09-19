@@ -77,6 +77,12 @@ variable "health_check_timeout" {
   default     = 5
 }
 
+variable "instance_ids" {
+  type        = list(string)
+  description = "List of EC2 instance IDs for target group"
+  default     = []
+}
+
 variable "unhealthy_threshold" {
   type        = number
   description = " Number of consecutive health check failures required before considering a target unhealthy."
