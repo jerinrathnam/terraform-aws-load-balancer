@@ -85,7 +85,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener_rule" "http" {
-  count = length(var.host_names) > 0 ? length(var.host_names) : length(var.host_paths) > 0 ? length(var.host_paths) : 0
+  count = local.http_action ? (length(var.host_names) > 0 ? length(var.host_names) : length(var.host_paths) > 0 ? length(var.host_paths) : 0) : 0
 
   priority     = count.index + 1
   listener_arn = var.create_listeners ? one(aws_lb_listener.http[*].arn) : var.http_listener_arn
@@ -129,7 +129,7 @@ resource "aws_lb_listener_rule" "http" {
 }
 
 resource "aws_lb_listener_rule" "http_1" {
-  count = length(var.host_names_and_paths) > 0 ? length(var.host_names_and_paths) : 0
+  count = local.http_action ? (length(var.host_names_and_paths) > 0 ? length(var.host_names_and_paths) : 0) : 0
 
   priority     = count.index + 1
   listener_arn = var.create_listeners ? one(aws_lb_listener.http[*].arn) : var.http_listener_arn
