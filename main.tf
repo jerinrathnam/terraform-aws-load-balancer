@@ -85,7 +85,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener_rule" "http" {
-  count = local.http_action ? (length(var.host_names) > 0 ? length(var.host_names) : length(var.host_paths) > 0 ? length(var.host_paths) : 0) : 0
+  count = local.http_action ? 0 : (length(var.host_names) > 0 ? length(var.host_names) : length(var.host_paths) > 0 ? length(var.host_paths) : (length(var.host_names_and_paths) > 0 ? length(var.host_names_and_paths) : 0))
 
   priority     = count.index + 1
   listener_arn = var.create_listeners ? one(aws_lb_listener.http[*].arn) : var.http_listener_arn
@@ -123,29 +123,6 @@ resource "aws_lb_listener_rule" "http" {
         values = [var.host_paths[count.index]]
       }
 
-    }
-  }
-
-}
-
-resource "aws_lb_listener_rule" "http_1" {
-  count = local.http_action ? (length(var.host_names_and_paths) > 0 ? length(var.host_names_and_paths) : 0) : 0
-
-  priority     = count.index + 1
-  listener_arn = var.create_listeners ? one(aws_lb_listener.http[*].arn) : var.http_listener_arn
-
-  action {
-    type             = local.http_action ? "redirect" : "forward"
-    target_group_arn = local.http_action ? null : aws_lb_target_group.this[count.index + 1].arn
-
-    dynamic "redirect" {
-      for_each = local.http_action ? [1] : []
-
-      content {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301"
-      }
     }
   }
 
@@ -170,6 +147,7 @@ resource "aws_lb_listener_rule" "http_1" {
 
     }
   }
+
 }
 
 ################################## LISTENER CREATION HTTPS #####################################################
@@ -190,7 +168,7 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_lb_listener_rule" "https" {
-  count = var.create_listeners && local.http_action ? (length(var.host_names) > 0 ? length(var.host_names) : length(var.host_paths) > 0 ? length(var.host_paths) : 0) : 0
+  count = local.http_action ? (length(var.host_names) > 0 ? length(var.host_names) : length(var.host_paths) > 0 ? length(var.host_paths) : (length(var.host_names_and_paths) > 0 ? length(var.host_names_and_paths) : 0)) : 0
 
   priority     = count.index + 1
   listener_arn = var.https_listener_arn == null ? one(aws_lb_listener.https[*].arn) : var.https_listener_arn
@@ -218,18 +196,6 @@ resource "aws_lb_listener_rule" "https" {
         values = [var.host_paths[count.index]]
       }
     }
-  }
-}
-
-resource "aws_lb_listener_rule" "https_1" {
-  count = var.create_listeners && local.http_action ? (length(var.host_names_and_paths) > 0 ? length(var.host_names_and_paths) : 0) : 0
-
-  priority     = count.index + 1
-  listener_arn = var.https_listener_arn == null ? one(aws_lb_listener.https[*].arn) : var.https_listener_arn
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.this[count.index + 1].arn
   }
 
   # host and path conditions
@@ -258,9 +224,9 @@ resource "aws_lb_listener_rule" "https_1" {
 ####################### TARGET GROUP #############################
 
 resource "aws_lb_target_group" "this" {
-  count = length(var.name)
+  count = length(var.names)
 
-  name        = var.name[count.index]
+  name        = var.names[count.index]
   port        = length(var.target_group_ports) > 1 ? var.target_group_ports[count.index] : var.target_group_ports[0]
   protocol    = length(var.protocol) > 1 ? var.protocol[count.index] : var.protocol[0]
   target_type = length(var.target_type) > 1 ? var.target_type[count.index] : var.target_type[0]
@@ -268,7 +234,7 @@ resource "aws_lb_target_group" "this" {
 
   tags = merge(
     {
-      "Name" = var.name[count.index]
+      "Name" = var.names[count.index]
     },
     var.tags
   )
@@ -286,9 +252,9 @@ resource "aws_lb_target_group" "this" {
 }
 
 resource "aws_lb_target_group_attachment" "this" {
-  count = length(var.instance_ids) > 0 ? length(var.instance_ids) : 0
+  count = var.instance_id != null ? length(var.names) : 0
 
-  target_group_arn = aws_lb_target_group.this[0].arn
-  target_id        = var.instance_ids[count.index]
+  target_group_arn = aws_lb_target_group.this[count.index].arn
+  target_id        = var.instance_id
   port             = length(var.ports) > 1 ? var.ports[count.index] : var.ports[0]
 }

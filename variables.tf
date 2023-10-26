@@ -77,10 +77,10 @@ variable "health_check_timeout" {
   default     = 5
 }
 
-variable "instance_ids" {
-  type        = list(string)
-  description = "List of EC2 instance IDs for target group"
-  default     = []
+variable "instance_id" {
+  type        = string
+  description = "EC2 instance ID for target group attachment"
+  default     = null
 }
 
 variable "unhealthy_threshold" {
@@ -119,7 +119,7 @@ variable "load_balancer_type" {
   default     = "application"
 }
 
-variable "name" {
+variable "names" {
   type        = list(string)
   description = "List of names for target groups"
   default     = []
